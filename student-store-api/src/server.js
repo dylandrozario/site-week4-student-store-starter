@@ -1,5 +1,6 @@
 const express = require("express");
 const Product = require("./models/product");
+const Order = require("./models/order");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -92,6 +93,97 @@ app.delete("/products/:id", async (req, res) => {
     }
     console.error(err);
     res.status(500).json({ error: "Failed to delete product" });
+  }
+});
+
+// GET /orders — list all orders (optional ?customer_id, ?sort, ?order)
+app.get("/orders", async (req, res) => {
+  try {
+    const { customer_id, sort, order } = req.query;
+    const orders = await Order.list({ customer_id, sort, order });
+    res.status(200).json(orders);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch orders" });
+  }
+});
+
+// GET /orders/:order_id — fetch one order
+app.get("/orders/:order_id", async (req, res) => {
+  const order_id = Number(req.params.order_id);
+  if (!Number.isInteger(order_id)) {
+    return res.status(400).json({ error: "order_id must be an integer" });
+  }
+  try {
+    const order = await Order.get(order_id);
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    res.status(200).json(order);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch order" });
+  }
+});
+
+// POST /orders — create a new order (plain create; transactional flow comes later)
+app.post("/orders", async (req, res) => {
+  const { customer_id, total_price, status } = req.body ?? {};
+  if (!customer_id || typeof customer_id !== "string") {
+    return res.status(400).json({ error: "Missing required field: customer_id" });
+  }
+  if (total_price === undefined || total_price === null) {
+    return res.status(400).json({ error: "Missing required field: total_price" });
+  }
+  if (status !== undefined && !Order.VALID_STATUSES.has(status)) {
+    return res.status(400).json({ error: "status must be one of: pending, completed, cancelled" });
+  }
+  try {
+    const order = await Order.create({ customer_id, total_price, status });
+    res.status(201).json(order);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to create order" });
+  }
+});
+
+// PUT /orders/:order_id — update an existing order (customer_id and/or status only)
+app.put("/orders/:order_id", async (req, res) => {
+  const order_id = Number(req.params.order_id);
+  if (!Number.isInteger(order_id)) {
+    return res.status(400).json({ error: "order_id must be an integer" });
+  }
+  const { customer_id, status } = req.body ?? {};
+  if (status !== undefined && !Order.VALID_STATUSES.has(status)) {
+    return res.status(400).json({ error: "status must be one of: pending, completed, cancelled" });
+  }
+  try {
+    const order = await Order.update(order_id, { customer_id, status });
+    res.status(200).json(order);
+  } catch (err) {
+    if (err.code === "P2025") {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    console.error(err);
+    res.status(500).json({ error: "Failed to update order" });
+  }
+});
+
+// DELETE /orders/:order_id — delete an order (cascades to OrderItems once relation exists)
+app.delete("/orders/:order_id", async (req, res) => {
+  const order_id = Number(req.params.order_id);
+  if (!Number.isInteger(order_id)) {
+    return res.status(400).json({ error: "order_id must be an integer" });
+  }
+  try {
+    await Order.remove(order_id);
+    res.status(204).send();
+  } catch (err) {
+    if (err.code === "P2025") {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete order" });
   }
 });
 
