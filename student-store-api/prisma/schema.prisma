@@ -14,21 +14,37 @@ datasource db {
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   name        String
   description String
-  price       Decimal  @db.Decimal(10, 2)
+  price       Decimal     @db.Decimal(10, 2)
   image_url   String
   category    String
-  created_at  DateTime @default(now())
+  created_at  DateTime    @default(now())
+  orderItems  OrderItem[]
 }
 
 model Order {
-  order_id    Int      @id @default(autoincrement())
+  order_id    Int         @id @default(autoincrement())
   customer_id String
-  total_price Decimal  @db.Decimal(10, 2)
-  status      String   @default("pending")
-  created_at  DateTime @default(now())
+  total_price Decimal     @db.Decimal(10, 2)
+  status      String      @default("pending")
+  created_at  DateTime    @default(now())
+  orderItems  OrderItem[]
 
   @@index([customer_id])
+}
+
+model OrderItem {
+  order_item_id Int     @id @default(autoincrement())
+  order_id      Int
+  product_id    Int
+  quantity      Int
+  price         Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [order_id], references: [order_id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@index([order_id])
+  @@index([product_id])
 }

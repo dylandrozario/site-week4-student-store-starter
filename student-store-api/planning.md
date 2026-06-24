@@ -588,3 +588,32 @@ No spec changes. Every route behaved exactly as Section 2 described:
 - `DELETE /products/:id` → `204` with empty body ✅
 
 The one implementation detail that wasn't in the spec but didn't require a spec change: Prisma's `update` and `delete` throw error code `P2025` when the target row doesn't exist. The route handlers catch that specifically and return `404`. The spec already promised `404` for those cases; the `P2025` mapping is just *how* the route fulfills that promise.
+
+---
+
+# Spec Reconciliation — Milestone 4 (Schema Audit)
+
+Audit performed by comparing `prisma/schema.prisma` against Section 1 of this document (Data Models) field-by-field, then verifying cascade behavior against the actual Postgres database with `psql \d "OrderItem"` and through the live API.
+
+### Schema vs. spec gaps found
+
+- **No field-level gaps in any of the three models.** Every field documented in Section 1 — name, type, default, `@db.Decimal(10, 2)` modifier, primary key, back-references — is present in `schema.prisma` and matches exactly. `Product` has all 7 spec fields, `Order` has all 5 + the `@@index([customer_id])` documented in Section 1, `OrderItem` has all 5 fields plus both `@relation` annotations with the FK targets and cascade rules.
+- **Relationships are correctly modeled.** Both `@relation` annotations on `OrderItem` target the parent's actual primary key column — `Order.order_id` and `Product.id` — rather than assuming a generic `id`. Important because `Order`'s PK is `order_id`, not `id`.
+- **Two schema additions not explicitly in the spec, both intentional:**
+  - `@@index([order_id])` on `OrderItem`
+  - `@@index([product_id])` on `OrderItem`
+  These FK columns get queried on every `include: { orderItems: true }` (the `GET /orders/:order_id` flow) and every cascade-delete check. The indexes make those lookups use the index instead of a full table scan. Performance-only addition with no behavior change — not worth promoting to the spec, but noting here so future-me knows they exist by design.
+- **Migration is named `init_order_items_table`** instead of the task's example `add_order_items_with_relations`. Both describe the migration accurately; mine follows the `init_*` pattern of the prior two migrations for consistency. Once applied, migration names are immutable (renaming them creates hash mismatches in the migration tracking table), so leaving it alone.
+
+### Cascade delete verification
+
+- **Deleting a Product removes associated OrderItems**: ✅ tested
+  - Verified at the schema level: `OrderItem_product_id_fkey ... ON DELETE CASCADE` confirmed in `psql \d "OrderItem"` output.
+  - Verified via Prisma Studio: deleted a Product that appeared in an OrderItem; the OrderItem row disappeared, the parent Order survived (with its now-stale `total_price` snapshot — the documented "intersection problem" behavior from Section 1).
+  - Verifiable via API: `DELETE /products/:id` followed by `GET /orders/:order_id` shows the `orderItems` array shorter by one entry while the order itself remains.
+
+- **Deleting an Order removes associated OrderItems**: ✅ tested
+  - Verified at the schema level: `OrderItem_order_id_fkey ... ON DELETE CASCADE` confirmed in `psql \d "OrderItem"` output.
+  - Verified via Prisma Studio and the live API: `DELETE /orders/:order_id` returns `204`; the corresponding OrderItem rows are gone; the referenced Products in the catalog are untouched.
+
+Both cascade rules from Section 1 are enforced by Postgres itself, not by application code — even raw SQL bypassing Prisma would still trigger the cascade.
