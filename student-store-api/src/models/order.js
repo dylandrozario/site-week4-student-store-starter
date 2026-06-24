@@ -70,13 +70,15 @@ class Order {
       new Prisma.Decimal(0),
     );
 
-    return prisma.order.create({
-      data: {
-        customer_id,
-        total_price,
-        orderItems: { create: lineItems },
-      },
-      include: { orderItems: true },
+    return prisma.$transaction(async (tx) => {
+      return tx.order.create({
+        data: {
+          customer_id,
+          total_price,
+          orderItems: { create: lineItems },
+        },
+        include: { orderItems: true },
+      });
     });
   }
 

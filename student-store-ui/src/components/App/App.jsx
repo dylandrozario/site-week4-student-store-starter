@@ -9,19 +9,39 @@ import NotFound from "../NotFound/NotFound";
 import { removeFromCart, addToCart, getQuantityOfItemInCart, getTotalItemsInCart } from "../../utils/cart";
 import "./App.css";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 function App() {
 
   // State variables
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("All Categories");
   const [searchInputValue, setSearchInputValue] = useState("");
-  const [userInfo, setUserInfo] = useState({ name: "", dorm_number: ""});
+  const [userInfo, setUserInfo] = useState({ customer_id: "" });
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState({});
   const [isFetching, setIsFetching] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [error, setError] = useState(null);
   const [order, setOrder] = useState(null);
+
+  // Fetch products on mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsFetching(true);
+      setError(null);
+      try {
+        const response = await axios.get(`${API_URL}/products`);
+        setProducts(response.data);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load products. Is the API running?");
+      } finally {
+        setIsFetching(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   // Toggles sidebar
   const toggleSidebar = () => setSidebarOpen((isOpen) => !isOpen);
@@ -37,7 +57,38 @@ function App() {
   };
 
   const handleOnCheckout = async () => {
-  }
+    if (!userInfo.customer_id) {
+      setError("Please enter your email before checking out.");
+      return;
+    }
+    if (Object.keys(cart).length === 0) {
+      setError("Your cart is empty.");
+      return;
+    }
+
+    setIsCheckingOut(true);
+    setError(null);
+
+    const items = Object.entries(cart).map(([id, quantity]) => ({
+      product_id: Number(id),
+      quantity,
+    }));
+
+    try {
+      const response = await axios.post(`${API_URL}/orders`, {
+        customer_id: userInfo.customer_id,
+        items,
+      });
+      setOrder(response.data);
+      setCart({});
+    } catch (err) {
+      console.error(err);
+      const message = err.response?.data?.error ?? "Checkout failed. Please try again.";
+      setError(message);
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
 
 
   return (
@@ -116,4 +167,3 @@ function App() {
 }
 
 export default App;
- 

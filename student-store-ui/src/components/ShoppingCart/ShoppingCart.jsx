@@ -123,7 +123,7 @@ export default function ShoppingCart({
             isCheckingOut={isCheckingOut}
             error={error}
           />
-          <CheckoutSuccess userInfo={userInfo} order={order} setOrder={setOrder} />
+          <CheckoutSuccess userInfo={userInfo} order={order} setOrder={setOrder} products={products} />
         </div>
       ) : (
         null

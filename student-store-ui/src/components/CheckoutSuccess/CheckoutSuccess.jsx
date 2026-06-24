@@ -1,15 +1,32 @@
+import { formatPrice } from "../../utils/format"
 import "./CheckoutSuccess.css"
 
-const CheckoutSuccess = ({ order, setOrder }) => {
+const CheckoutSuccess = ({ order, setOrder, products = [] }) => {
   const handleOnClose = () => {
     setOrder(null)
   }
 
+  const productById = products.reduce((acc, p) => {
+    acc[p.id] = p
+    return acc
+  }, {})
+
   const renderReceipt = () => (
     <>
-      <p className="header">{order.purchase.receipt.lines[0]}</p>
+      <p className="header">Order #{order.order_id} — {order.customer_id}</p>
       <ul className="purchase">
-        {order.purchase.receipt.lines.slice(1).map((line, idx) => (Boolean(line) ? <li key={idx}>{line}</li> : null))}
+        {order.orderItems.map((item) => {
+          const product = productById[item.product_id]
+          const name = product?.name ?? `Product #${item.product_id}`
+          return (
+            <li key={item.order_item_id}>
+              {item.quantity} × {name} @ {formatPrice(item.price)}
+            </li>
+          )
+        })}
+        <li className="total">
+          <strong>Total: {formatPrice(order.total_price)}</strong>
+        </li>
       </ul>
     </>
   )
@@ -22,12 +39,12 @@ const CheckoutSuccess = ({ order, setOrder }) => {
           <i className="material-icons md-48">fact_check</i>
         </span>
       </h3>
-      {order?.purchase ? (
+      {order ? (
         <div className="card">
           <header className="card-head">
             <h4 className="card-title">Receipt</h4>
           </header>
-          <section className="card-body">{order?.purchase?.receipt ? renderReceipt() : "Success!"}</section>
+          <section className="card-body">{renderReceipt()}</section>
           <footer className="card-foot">
             <button className="button is-success" onClick={handleOnClose}>
               Shop More

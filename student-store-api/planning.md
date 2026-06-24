@@ -111,7 +111,7 @@ This is the question the brief flags: `OrderItem` lives at the intersection of t
 
 **My decision:** Use Option A — cascade, as the spec requires. Accept that the consequence is occasional drift between an order's `total_price` and the sum of its surviving items. Mitigate it by treating `OrderItem.price` as a permanent snapshot (already in the schema), so the *line items that remain* still hold accurate historical pricing. If product-deletion-during-active-orders becomes a real concern later, that's the moment to reconsider — but design for the spec now, not for hypotheticals.
 
-**Practical guardrail for the API layer (not the schema):** the `DELETE /products/:id` handler should probably warn / require confirmation if the product is referenced by any non-cancelled order. That belongs in the route, not the database — the schema's job is to enforce the cascade, not to second-guess it.
+**Practical guardrail for the API layer (not the schema):** the `DELETE /products/:id` controller should probably warn / require confirmation if the product is referenced by any non-cancelled order. That belongs in the controller, not the database — the schema's job is to enforce the cascade, not to second-guess it.
 
 ---
 
@@ -335,7 +335,7 @@ This is the most complex endpoint. It creates an Order **and** its OrderItems in
     "created_at": "2026-06-17T14:23:11.000Z",
     "orderItems": [
       { "order_item_id": 1, "order_id": 42, "product_id": 7,  "quantity": 3, "price": "34.99" },
-      { "order_item_id": 2, "order_id": 42, "product_id": 12, "quantity": 1, "price": "0.00"  }
+      { "order_item_id": 2, "order_id": 42, "product_id": 12, "quantity": 1, "price": "19.99" }
     ]
   }
   ```
@@ -355,7 +355,7 @@ Update an order. Primary use is changing `status`.
 
 - **Route param:** `order_id`.
 - **Request body:** any subset of `{ customer_id, status }`. **`total_price` and `orderItems` are not editable here** — line-item changes go through dedicated endpoints (or a stretch endpoint), not a generic order update. Mixing them invites bugs where total_price drifts from the items.
-- **`status` validation:** if provided, must be one of `"pending"` / `"completed"` / `"cancelled"`. Any other value → `400 { "error": "status must be one of: pending, completed, cancelled" }`. The column itself is a free-form `String` in the schema; the route enforces the allow-list rather than a Prisma enum so we can extend it without a migration.
+- **`status` validation:** if provided, must be one of `"pending"` / `"completed"` / `"cancelled"`. Any other value → `400 { "error": "status must be one of: pending, completed, cancelled" }`. The column itself is a free-form `String` in the schema; the controller (with the allow-list exposed as `Order.VALID_STATUSES`) enforces the values rather than a Prisma enum so we can extend the list without a migration.
 - **Success — `200 OK`:** the updated order.
 - **Error — `404`:** order doesn't exist.
 
@@ -457,6 +457,8 @@ const items = [...merged.entries()].map(([product_id, quantity]) => ({ product_i
 
 This matches how a real shopping cart behaves (clicking "add" twice doesn't create two lines) and avoids two `OrderItem` rows that point at the same product on the same order — which would force every "how many of product X is in this order?" query to do a `SUM`.
 
+**Response-shape consequence:** if the client sent `items: [{product_id: 7, quantity: 1}, {product_id: 7, quantity: 2}]`, the response's `orderItems` array contains **one** entry with `quantity: 3`, not two entries. Frontends consuming the response should not assume `response.orderItems.length === request.items.length`.
+
 ### 2. Look up every referenced product
 
 ```js
@@ -470,17 +472,33 @@ One round trip, not N. Returns at most N rows.
 
 ### 3. Check for missing products (existence check)
 
+The model checks every requested `product_id` against the rows returned in step 2. If any is missing, throw a typed error and let the controller decide what to do with it:
+
 ```js
-if (products.length !== new Set(productIds).size) {
-  const found = new Set(products.map(p => p.id));
-  const missing = productIds.find(id => !found.has(id));
-  return res.status(409).json({ error: `Product not found: id ${missing}` });
+// in models/order.js
+const productMap = new Map(products.map(p => [p.id, p]));
+for (const id of productIds) {
+  if (!productMap.has(id)) {
+    throw new MissingProductError(id);
+  }
+}
+```
+
+```js
+// in controllers/orders.js — translates the typed error into an HTTP response
+} catch (err) {
+  if (err instanceof Order.MissingProductError) {
+    return res.status(409).json({ error: err.message });
+  }
+  // ...
 }
 ```
 
 If even one `product_id` from the request doesn't exist, the whole order is rejected. **Nothing has been written yet** — the DB state is identical to before the request. This is by design: the existence check runs *outside* the transaction precisely so we don't need the transaction to roll it back.
 
 Status code is `409 Conflict`, not `404`. The request body is structurally valid; the conflict is between the request and current DB state.
+
+**Why the model throws instead of returning a status code directly:** the model has no knowledge of HTTP — that's the controller's job. The model's contract is "do the database work or throw a typed error explaining why you can't." Keeping it HTTP-free means the same model methods are reusable from scripts, tests, or future endpoints without dragging Express into them. `MissingProductError` is exported on the `Order` module so the controller can `err instanceof Order.MissingProductError` to map it cleanly.
 
 ### 4. Snapshot prices and compute the total
 
@@ -504,11 +522,13 @@ Two things to notice:
 - `price` on each line item is the **current** `Product.price`, captured *now* and frozen into `OrderItem.price`. Section 1 calls this the snapshot — it's why an order's history stays accurate even if a product's price changes later (or the product is deleted).
 - `total_price` is computed with `Prisma.Decimal`, not JavaScript `Number`. Adding `0.1 + 0.2` in JS gives `0.30000000000000004`; for money, that's a bug waiting to happen.
 
-### 5. Write everything in one transaction
+### 5. Open the transaction and write atomically
+
+This is the only step that actually writes to the database. The Order insert and all `OrderItem` inserts are wrapped in an explicit `prisma.$transaction(...)` block, with the nested write doing the actual inserts inside it:
 
 ```js
-const created = await prisma.$transaction(async (tx) => {
-  const order = await tx.order.create({
+return prisma.$transaction(async (tx) => {
+  return tx.order.create({
     data: {
       customer_id,
       total_price,
@@ -519,20 +539,26 @@ const created = await prisma.$transaction(async (tx) => {
     },
     include: { orderItems: true },
   });
-  return order;
 });
 ```
 
 A few things make this atomic:
 
-- **Prisma's nested `create`** issues the `Order` insert and all `OrderItem` inserts inside one DB transaction. Either every row commits, or none does.
-- The `tx` callback form means: if any statement inside throws, Prisma rolls the whole transaction back. No partial state ever becomes visible to another query.
-- `include: { orderItems: true }` returns the freshly-written order with its items already attached — exactly the shape the response promises.
+- **`prisma.$transaction` opens a single database transaction** and gives the callback a transactional client (`tx`). Every Prisma call made on `tx` runs inside that transaction.
+- **The nested `create`** issues the `Order` insert and all `OrderItem` inserts together. Because they share the `tx` client, they all participate in the same transaction.
+- **If any statement inside throws**, Prisma rolls the whole transaction back. No partial state ever becomes visible to another query.
+- **`include: { orderItems: true }`** returns the freshly-written order with its items already attached — exactly the shape the response promises.
+
+**Why use the explicit `$transaction` wrapper here:** the nested `create` alone is already atomic in Prisma. Wrapping it in `$transaction` is technically belt-and-suspenders for this single-call case, but it makes the transactional intent obvious to anyone reading the code, and it provides a natural place to add more transactional steps later (e.g., decrementing product stock) without restructuring the call.
 
 ### 6. Respond
 
+The model returns the created order (with embedded `orderItems`) to the controller. The controller wraps it in an HTTP response:
+
 ```js
-return res.status(201).json(created);
+// in controllers/orders.js
+const order = await Order.createWithItems({ customer_id, items });
+res.status(201).json(order);
 ```
 
 Response body matches the contract in Section 2: full order with embedded `orderItems`, server-generated `order_id` / `created_at`, computed `total_price`, snapshotted per-line `price`.
@@ -541,8 +567,10 @@ Response body matches the contract in Section 2: full order with embedded `order
 
 | When | Status | Body | DB state after |
 | --- | --- | --- | --- |
-| Body missing `customer_id` / `items` empty | `400` | `{ "error": "items must be a non-empty array" }` | unchanged |
-| `items[i].quantity` is `0` or negative | `400` | `{ "error": "quantity must be ≥ 1" }` | unchanged |
+| `customer_id` missing or not a string | `400` | `{ "error": "Missing required field: customer_id" }` | unchanged |
+| `items` missing, not an array, or empty | `400` | `{ "error": "items must be a non-empty array" }` | unchanged |
+| `items[i].product_id` is not an integer | `400` | `{ "error": "Each item must have an integer product_id" }` | unchanged |
+| `items[i].quantity` is not an integer ≥ 1 | `400` | `{ "error": "Each item must have an integer quantity ≥ 1" }` | unchanged |
 | `items` references a `product_id` that doesn't exist | `409` | `{ "error": "Product not found: id 999" }` | unchanged |
 | Transaction throws partway through (e.g. DB connection drops mid-write) | `500` | `{ "error": "Failed to create order" }` | unchanged — Prisma rolls back |
 | Success | `201` | full order with items | one new `Order` row + N new `OrderItem` rows, all committed together |
@@ -587,7 +615,40 @@ No spec changes. Every route behaved exactly as Section 2 described:
 - `PUT /products/:id` → `200` + updated product, partial updates work (sending only `price` left other fields intact) ✅
 - `DELETE /products/:id` → `204` with empty body ✅
 
-The one implementation detail that wasn't in the spec but didn't require a spec change: Prisma's `update` and `delete` throw error code `P2025` when the target row doesn't exist. The route handlers catch that specifically and return `404`. The spec already promised `404` for those cases; the `P2025` mapping is just *how* the route fulfills that promise.
+The one implementation detail that wasn't in the spec but didn't require a spec change: Prisma's `update` and `delete` throw error code `P2025` when the target row doesn't exist. The controller catches that specifically and returns `404`. The spec already promised `404` for those cases; the `P2025` mapping is just *how* the controller fulfills that promise.
+
+---
+
+# Codebase Layout (Post-Refactor)
+
+The early commits had every route handler living inline in `src/server.js`. After the product and order routes were both built, that file hit ~200 lines with three concerns mixed together: HTTP request parsing, validation, and Prisma calls. It was refactored into the conventional layered structure:
+
+```
+src/
+├── server.js                  Boot the Express app, register middleware,
+│                              mount routers under URL prefixes, listen.
+├── routes/
+│   ├── products.js            Pure URL → controller mapping.
+│   └── orders.js              No logic — just `router.get("/", controller.list)` etc.
+├── controllers/
+│   ├── products.js            HTTP-aware logic: read req, validate,
+│   └── orders.js              call model, choose status code, format response.
+└── models/
+    ├── product.js             Database-only logic via Prisma. No knowledge
+    ├── order.js               of HTTP. Throws typed errors; controller maps
+    └── orderItem.js           them to status codes.
+```
+
+**Why the layers:**
+
+- **`server.js`** is the only file that calls `app.listen()` and the only one that knows about middleware ordering. It mounts routers with `app.use("/products", productsRouter)` etc.
+- **`routes/`** files are thin wiring — they convert (URL + HTTP verb) into "call this controller function." Reading one of them tells you every endpoint that resource exposes at a glance.
+- **`controllers/`** is where the HTTP-aware work lives: pulling fields out of `req.body` / `req.params` / `req.query`, validating shapes, deciding on `400` vs `404` vs `409` vs `500`, calling `res.status(...).json(...)`.
+- **`models/`** stays pure — never imports `express`, never sees a `req` or `res`. Returns data or throws a typed error (like `MissingProductError`). This means the same model methods would work from a CLI script, a cron job, or a test, without dragging HTTP into them.
+
+**Boundary rule:** errors cross layer boundaries in one direction only. A Prisma error or a typed model error (`MissingProductError`, Prisma's `P2025`) bubbles up to the controller, which decides what HTTP status to translate it into. The model never returns a status code; the controller never builds a Prisma query.
+
+This layout is recorded here in `planning.md` because every section above this one (Sections 2 and 3 in particular) implicitly assumes it — when Section 3 says "the model throws and the controller catches," that's the line being drawn.
 
 ---
 
@@ -617,3 +678,134 @@ Audit performed by comparing `prisma/schema.prisma` against Section 1 of this do
   - Verified via Prisma Studio and the live API: `DELETE /orders/:order_id` returns `204`; the corresponding OrderItem rows are gone; the referenced Products in the catalog are untouched.
 
 Both cascade rules from Section 1 are enforced by Postgres itself, not by application code — even raw SQL bypassing Prisma would still trigger the cascade.
+
+---
+
+# Decisions Log — Order Creation Transaction
+
+## What my Transactional Flow spec got right
+
+The big structural choices held up:
+
+- **Pulling prices server-side** rather than trusting the client. The spec calls this out as a security decision ("trusting client-supplied prices would let any caller pay $0") and that turned out to be the right framing — the implementation never had to relax it.
+- **Running the existence check *before* the transaction.** This is the single highest-leverage decision in Section 3. It means the `409 Product not found` path requires zero rollback because nothing was ever written. It also keeps the transaction body tiny and predictable.
+- **Snapshotting `Product.price` into `OrderItem.price`.** Confirmed in Postman: deleting a product later cascade-removes the OrderItem but the surviving items still hold accurate historical pricing — which is the *whole point* of the snapshot pattern.
+- **Computing `total_price` with `Prisma.Decimal`, not JS `Number`.** Avoided the `0.1 + 0.2 = 0.30000000000000004` trap. The response correctly returns `"124.97"`, not `"124.96999999..."`.
+- **Merging duplicate `product_id`s upstream** rather than letting them become two OrderItem rows. The implementation needed exactly the code sketch in Section 3 Step 1 with no modifications.
+
+## What the spec missed that I discovered during implementation
+
+Five spec-vs-code drifts surfaced during the milestone-4 audit and were reconciled into the spec:
+
+1. **The spec showed `prisma.$transaction(async (tx) => ...)` but Step 5 was initially implemented as a bare nested `create`.** Prisma's nested write is automatically transactional, so behavior was correct, but the spec and the code didn't match. Resolved by wrapping the nested write in an explicit `$transaction` block — making the transactional intent visible and leaving room to add future steps (stock decrement, audit log) without restructuring.
+2. **Step 3 of the spec used `res.status(409).json(...)` inside what should be model code.** The implementation correctly throws a typed `MissingProductError` from the model and lets the controller translate to `409`. Updated the spec to show this layering — model throws, controller catches.
+3. **`MissingProductError` was undocumented.** The custom error class exists in code with a `missingId` property for programmatic access; it's now mentioned in the spec by name so any future endpoint that needs the same pattern knows what to import.
+4. **The response example had a bogus `"price": "0.00"` for the notebook line item.** Off the cuff value from when the example was first written — replaced with `"19.99"` to match a realistic snapshot.
+5. **The spec didn't warn that merged duplicates change the response shape.** If a client sends `[{product_id: 7, quantity: 1}, {product_id: 7, quantity: 2}]`, the response has **one** OrderItem with quantity 3, not two entries. Added a "Response-shape consequence" callout to Step 1 so frontends don't assume `response.orderItems.length === request.items.length`.
+
+Also surfaced but already correct in the spec: the 5-bullet validation block (customer_id type, items array shape, integer product_id, integer quantity ≥ 1) maps 1:1 to the code's validation order.
+
+## How the transaction error handling works
+
+`prisma.$transaction(async (tx) => { ... })` opens a single database transaction (`BEGIN`), runs the callback you give it, and:
+
+- **If the callback returns a value normally** → Prisma issues `COMMIT`. Every insert/update/delete made through the `tx` client becomes permanently visible to other queries, all at the same moment.
+- **If the callback throws** (anything — a thrown error from your code, a Prisma validation error, a foreign-key violation, a network failure mid-write) → Prisma issues `ROLLBACK`. Every change attempted inside the callback is discarded. The database state is bit-for-bit identical to what it was before the transaction opened. No other query ever saw the in-progress writes — the transaction is **isolated**.
+
+The `tx` client passed into the callback is critical: it's a special version of `prisma` that's bound to the open transaction. Calls to `tx.order.create(...)` participate in the rollback. Calls to the outer `prisma.order.create(...)` *inside* the same callback would run as their own separate, unrelated transactions and would NOT roll back if the surrounding `$transaction` failed. Always use `tx`.
+
+For `POST /orders` specifically: the only thing inside the transaction is one nested `create` call. So in practice the failures Prisma has to roll back are narrow — a FK violation if a product was deleted between the existence check and the commit (the documented race condition), or a DB-level error like a dropped connection. The controller catches whatever bubbles up and translates it: `MissingProductError` → `409`, anything else → `500`. In both error cases the DB ends up unchanged.
+
+## One thing I'd design differently if starting over
+
+The validation chain in `controllers/orders.js` for `POST /orders` is currently a series of early-return `if` checks that fail on the *first* problem. So a request with both a missing `customer_id` and a malformed `items` array tells the client only about the customer_id problem; they fix it, resubmit, and now they hear about items. Two round trips to find out about two unrelated issues.
+
+I'd build the validation as a single pass that collects every problem into one response: `{ error: "Validation failed", details: ["customer_id is required", "items[0].quantity must be ≥ 1"] }`. That changes the error shape from Section 2's strict `{ error: <string> }` contract though, so it's a deliberate tradeoff — better UX vs. predictable contract. If I were starting over knowing this project's scale, I'd extend the contract once at the top of Section 2 (`{ error: <string>, details?: string[] }`) and let multi-error responses use the optional `details` array. Frontend code that ignores `details` keeps working; new code can lean on it for better forms.
+
+The other thing I'd reconsider: I exposed `MissingProductError` as a class on the `Order` module export, which works but feels off — domain errors arguably belong in their own `errors.js` module so any model can import `MissingProductError` or future siblings like `InsufficientStockError`. At three-line scale it doesn't matter, but it'd scale better.
+
+---
+
+# Spec Reconciliation — Milestone 6 (Frontend Integration Audit)
+
+Audit performed by reading every component in `student-store-ui/src/` to map what the frontend expects vs. what the API contract in Section 2 promises. The starter UI imports `axios` in `App.jsx` and `ProductDetail.jsx` but never calls it — no fetches are currently in flight. The audit is therefore about *what the frontend will need when wired up*, based on the state shapes and field reads already in the code.
+
+## What matches the spec already
+
+Product fields the frontend reads (`id`, `name`, `description`, `price`, `image_url`, `category`) all map 1:1 to the `GET /products` response shape in Section 2. `formatPrice(product.price)` accepts a string Decimal without modification. No fields are missing on either side for product display, search, or category filtering.
+
+## Mismatches found
+
+### 1. Request body for `POST /orders`: `customer_id` vs. `name` + `dorm_number`
+
+- **Spec wants:** `{ customer_id: "<email-shaped string>", items: [...] }`
+- **Frontend has:** `userInfo = { name: "", dorm_number: "" }` (intended) and a partially-broken `PaymentInfo.jsx` form that writes `name` but reads `id` and writes `email` — three field names for two inputs.
+
+**Resolution:** fix the form in `PaymentInfo.jsx` to capture a single email-shaped string, map it directly to `customer_id` in the request body. No spec change — Section 1 already documents `customer_id` as "the frontend treats it as an email but the API does not validate format."
+
+### 2. Cart shape: object-by-id vs. items array
+
+- **Spec wants:** `items: [{ product_id, quantity }, ...]`
+- **Frontend has:** `cart = { "7": 3, "12": 1 }` (keys are stringified product IDs)
+
+**Resolution:** transform at the boundary inside `handleOnCheckout` before POSTing — `Object.entries(cart).map(([id, quantity]) => ({ product_id: Number(id), quantity }))`. The cart object is fine for client-side use; convert at the wire. No spec change.
+
+### 3. Response shape: `order.purchase.receipt.lines` doesn't exist in the spec
+
+- **Spec returns:** `{ order_id, customer_id, total_price, status, created_at, orderItems: [...] }`
+- **Frontend reads** (`CheckoutSuccess.jsx:11-13`): `order.purchase.receipt.lines[0]` plus `.slice(1).map(...)` — a presentation-layer "receipt lines" array that the API has no business producing.
+
+**Resolution:** rewrite `CheckoutSuccess.jsx`'s `renderReceipt` to build the receipt UI from the real response shape — iterate `order.orderItems` to render line items, show `order.total_price` at the bottom, show `order.order_id` as the header. No spec change — pushing presentation concerns back to the frontend keeps the API response normalized and reusable.
+
+### 4. No API base URL configured in the frontend
+
+- **Backend mounted at:** `http://localhost:3000/` (root, no `/api` prefix — per Section 2 conventions)
+- **Frontend has:** no reference to `localhost:3000`, no `VITE_API_URL`, no axios `baseURL` config
+
+**Resolution:** add `VITE_API_URL=http://localhost:3000` to a `.env.local` in `student-store-ui/` and reference `import.meta.env.VITE_API_URL` in the axios calls. Hardcoding is also acceptable for a student project on localhost. No spec change.
+
+### 5. CORS not yet enabled on the backend
+
+- **Backend** runs on `localhost:3000`. **Frontend** runs on `localhost:5173` (Vite default). Cross-origin requests are blocked by default.
+- **Already documented as deferred** in Section 2 conventions: *"Milestone 6 will add `app.use(cors())` to allow the Vite frontend to call the API cross-origin."*
+
+**Resolution:** add `app.use(cors())` to `server.js` before mounting the routers. The `cors` package is already in `package.json` as a dependency. No spec change — this milestone is exactly when the documented deferral is meant to be resolved.
+
+## Bottom line
+
+**Zero spec changes needed.** All five mismatches are frontend-side or routing-config gaps. The starter UI was built around a hypothetical API that returned pre-formatted "receipt lines" and accepted user records with `name`/`dorm_number` fields — that's a different design than the one this project's spec describes. Reshape the frontend to match the spec, not the other way around.
+
+## Implementation order
+
+1. `app.use(cors())` in `server.js` — opens the cross-origin door.
+2. `VITE_API_URL=http://localhost:3000` in `student-store-ui/.env.local` — gives the frontend a target.
+3. `useEffect` in `App.jsx` that GETs `/products` on mount and `setProducts(response.data)` — smoke test; if this renders products, the wiring works.
+4. Fix `PaymentInfo.jsx` form to capture one email-shaped string, store it as `userInfo.customer_id`.
+5. Write `handleOnCheckout` in `App.jsx` to transform the cart, POST `/orders`, and `setOrder(response.data)` on success.
+6. Rewrite `CheckoutSuccess.jsx`'s `renderReceipt` to render from the real response shape (`order.orderItems`, `order.total_price`, `order.order_id`).
+
+## Frontend Behavior Notes (above the API spec)
+
+A full-flow audit of the checkout path turned up three frontend behaviors that exist *above* the API contract — they aren't bugs, but a reader of Sections 2 and 3 alone wouldn't know they happen. Recording them here so the system's behavior is fully captured.
+
+### 1. Frontend pre-validation before POST `/orders`
+
+Before submitting an order, `App.jsx`'s `handleOnCheckout` runs the same two checks the backend runs:
+
+- `userInfo.customer_id` non-empty → otherwise display `"Please enter your email before checking out."` and abort.
+- `Object.keys(cart).length > 0` → otherwise display `"Your cart is empty."` and abort.
+
+The backend still enforces both checks independently (it's the security boundary; the frontend is a UX optimization). A reader of Section 3 might expect the backend's `400 Missing required field: customer_id` to be the first place these errors surface — in practice, the frontend catches them and shows a friendlier message without making the round trip. Both messages describe the same logical error.
+
+### 2. Cart clears on successful order
+
+After a `201` response from `POST /orders`, `App.jsx` calls `setCart({})`. The spec doesn't require this — it's a deliberate frontend choice to prevent the same cart from being submitted twice if the user accidentally double-clicks Submit or navigates back to the sidebar. Once an order is created, the cart is conceptually "spent" and should not be reusable.
+
+### 3. Receipt product names come from the local `products` cache, not the order response
+
+`OrderItem` rows do **not** include the product's `name` — only its `product_id` (plus the price snapshot, quantity, etc.). The receipt in `CheckoutSuccess.jsx` joins the order's items against the locally-cached `products` array to render names. This is by design:
+
+- `OrderItem.price` is a snapshot of the product's price at order time (Section 1's price-snapshot rule). Including `OrderItem.name` would either (a) require snapshotting the name too, doubling the historical-data surface, or (b) be a live join that becomes stale when the product is renamed or deleted.
+- Keeping names out of `OrderItem` means the API response stays a clean record of *what was bought* (by ID + price), and the frontend handles the cosmetic concern of *what to call it*.
+
+If the cached `products` array doesn't contain the referenced ID (e.g., the product was deleted after the order was placed), the receipt falls back to rendering `"Product #${item.product_id}"`. This is defensive code; in normal usage it never fires because the products fetch completes long before any order is placed in the same session.

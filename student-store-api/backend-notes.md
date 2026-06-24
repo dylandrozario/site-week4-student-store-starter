@@ -64,7 +64,7 @@ That's it. Every backend in the world is some version of that loop. The complexi
 - The route doesn't know what database you're using.
 - This separation = if you swap one piece, you don't touch the rest.
 
-> **In this project**, the route and controller are combined inside `server.js`. That's fine for ~10 routes. In bigger apps they'd live in separate files.
+> **In this project**, the route and controller layers are split into separate files: `src/routes/products.js` + `src/controllers/products.js`, and the same for orders. `server.js` only boots the app and mounts the routers.
 
 ---
 
@@ -85,23 +85,30 @@ Without `server.js`, nothing runs. Everything else is imported by it.
 
 ### `routes/` — the receptionist
 
-In this project, routes live inside `server.js`. In bigger projects they'd be in `routes/products.js` and look like:
+In this project, routes live in `src/routes/products.js` and `src/routes/orders.js`. They look like:
 
 ```js
+const express = require("express");
+const productsController = require("../controllers/products");
+
 const router = express.Router();
+
 router.get("/", productsController.list);
 router.get("/:id", productsController.get);
 router.post("/", productsController.create);
+router.put("/:id", productsController.update);
+router.delete("/:id", productsController.remove);
+
 module.exports = router;
 ```
 
-Then `server.js` does `app.use("/products", productsRouter)`.
+Then `server.js` does `app.use("/products", productsRouter)` — meaning "everything starting with `/products` goes to this router."
 
-**Why split them out?** Once you have 20+ endpoints, `server.js` becomes unreadable.
+**Why split them out?** Once you have 20+ endpoints, `server.js` becomes unreadable. Even with ~10 endpoints like this project, separating routes from controllers means each file does one thing: routes wire URLs to functions; controllers do the actual request handling.
 
 ### `controllers/` — the manager
 
-The function that runs when a route matches. In this project, controllers live inside the route handlers in `server.js`.
+The function that runs when a route matches. In this project, controllers live in `src/controllers/products.js` and `src/controllers/orders.js`. Each controller exports named functions (`list`, `get`, `create`, `update`, `remove`) that the matching route file wires up.
 
 The controller's job:
 

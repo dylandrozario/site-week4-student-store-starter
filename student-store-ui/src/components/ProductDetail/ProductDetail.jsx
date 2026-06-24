@@ -1,39 +1,25 @@
-import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import axios from "axios";
 import NotFound from "../NotFound/NotFound";
 import { formatPrice } from "../../utils/format";
 import "./ProductDetail.css";
 
-function ProductDetail({ addToCart, removeFromCart, getQuantityOfItemInCart }) {
-  
+function ProductDetail({ products, addToCart, removeFromCart, getQuantityOfItemInCart }) {
   const { productId } = useParams();
-  const [product, setProduct] = useState(null);
-  const [isFetching, setIsFetching] = useState(false);
-  const [error, setError] = useState(null);
 
-
-  if (error) {
-    return <NotFound />;
+  if (!products || products.length === 0) {
+    return <h1>Loading...</h1>;
   }
 
-  if (isFetching || !product) {
-    return <h1>Loading...</h1>;
+  const product = products.find((p) => String(p.id) === String(productId));
+
+  if (!product) {
+    return <NotFound />;
   }
 
   const quantity = getQuantityOfItemInCart(product);
 
-  const handleAddToCart = () => {
-    if (product.id) {
-      addToCart(product)
-    }
-  };
-
-  const handleRemoveFromCart = () => {
-    if (product.id) {
-      removeFromCart(product);
-    }
-  };
+  const handleAddToCart = () => addToCart(product);
+  const handleRemoveFromCart = () => removeFromCart(product);
 
   return (
     <div className="ProductDetail">

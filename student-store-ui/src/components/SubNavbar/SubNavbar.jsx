@@ -1,9 +1,23 @@
+import { useLocation, useNavigate } from "react-router-dom"
 import "./SubNavbar.css"
 
 function SubNavbar({ activeCategory, setActiveCategory, searchInputValue, handleOnSearchInputChange }) {
+  const navigate = useNavigate()
+  const location = useLocation()
 
+  const categories = ["All Categories", "Accessories", "Apparel", "Books", "Snacks", "Supplies"]
 
-  const categories = ["All Categories", "Accessories", "Apparel", "Books", "Snacks", "Supplies"];
+  const handleCategoryClick = (cat) => {
+    setActiveCategory(cat)
+    navigate("/")
+  }
+
+  const handleSearchChange = (event) => {
+    handleOnSearchInputChange(event)
+    if (location.pathname !== "/") {
+      navigate("/")
+    }
+  }
 
   return (
     <nav className="SubNavbar">
@@ -17,7 +31,7 @@ function SubNavbar({ activeCategory, setActiveCategory, searchInputValue, handle
               name="search"
               placeholder="Search"
               value={searchInputValue}
-              onChange={handleOnSearchInputChange}
+              onChange={handleSearchChange}
             />
             <i className="material-icons">search</i>
           </div>
@@ -27,12 +41,12 @@ function SubNavbar({ activeCategory, setActiveCategory, searchInputValue, handle
           <ul className={`category-menu`}>
             {categories.map((cat) => (
               <li className={activeCategory === cat ? "is-active" : ""} key={cat}>
-                <button onClick={() => setActiveCategory(cat)}>{cat}</button>
+                <button onClick={() => handleCategoryClick(cat)}>{cat}</button>
               </li>
             ))}
           </ul>
         </div>
-        
+
       </div>
     </nav>
   )
