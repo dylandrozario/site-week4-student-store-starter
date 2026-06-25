@@ -1,46 +1,79 @@
 .Sidebar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  flex: 1;
-  transition: all 0.2s cubic-bezier(0.215, 0.61, 0.355, 1);
   position: fixed;
-  z-index: 100;
-  top: 0px;
+  top: 0;
+  right: 0;
   height: 100vh;
-  padding: 0;
-  overflow-y: scroll;
-  padding-bottom: 2rem;
-  background: var(--dark-blue);
-  border-right: solid 1px white;
+  width: 480px;
+  max-width: 100vw;
+  z-index: 200;
+  background: var(--pure-white);
+  border-left: 1px solid var(--border-color);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.08);
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.215, 0.61, 0.355, 1);
+  overflow-y: auto;
 }
-.Sidebar.closed {
-  width: 60px;
-}
+
 .Sidebar.open {
-  width: 575px;
+  transform: translateX(0);
 }
+
+.Sidebar.closed {
+  transform: translateX(100%);
+}
+
 .Sidebar .wrapper {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-.Sidebar .toggle-button {
-  margin-top: 20px;
-  transition: all 0.2s cubic-bezier(0.075, 0.82, 0.165, 1);
-}
-/* .Sidebar .toggle-button i {
-  color: white;
-  cursor: pointer;
-} */
-.Sidebar .toggle-button.open {
-  transform: rotateY(180deg);
+  padding: 20px 24px 32px;
+  gap: 24px;
 }
 
-.Sidebar i {
-  margin-right: 10px;
+.Sidebar .toggle-button {
+  align-self: flex-end;
+  background: transparent;
+  border: none;
   cursor: pointer;
-  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transition: background 0.15s ease;
+}
+
+.Sidebar .toggle-button:hover {
+  background: var(--soft-grey);
+}
+
+.Sidebar .toggle-button i {
+  color: var(--font-dark);
+  cursor: pointer;
+  margin: 0;
+}
+
+.Sidebar .logo {
+  display: none;
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 61, 46, 0.35);
+  z-index: 199;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media screen and (max-width: 540px) {
+  .Sidebar {
+    width: 100vw;
+  }
 }

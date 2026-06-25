@@ -9,7 +9,7 @@ function ProductGrid({ addToCart, removeFromCart, getQuantityOfItemInCart, produ
         <div className="grid">
 
           {!products?.length ? (
-            <div className="card">
+            <div className="card-empty">
               <p>No products available</p>
             </div>
           ) : products.map((product) => (

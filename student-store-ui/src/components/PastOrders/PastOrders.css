@@ -1,68 +1,115 @@
 .PastOrders {
-  padding: 2rem;
-  max-width: 1100px;
+  width: 100%;
+  max-width: var(--content-width);
   margin: 0 auto;
+  padding: 32px var(--side-padding) 60px;
 }
 
 .PastOrders h1 {
-  margin-bottom: 1.5rem;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--font-dark);
+  margin-bottom: 24px;
 }
 
+/* Filter bar */
 .PastOrders .filter-bar {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: 10px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .PastOrders .filter-bar .input-wrap {
   position: relative;
   flex: 1;
-  min-width: 240px;
+  min-width: 260px;
 }
 
 .PastOrders .filter-bar input[type="text"] {
   width: 100%;
-  padding: 0.5rem 2rem 0.5rem 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
+  height: 44px;
+  padding: 0 2.5rem 0 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--pure-white);
+  font-size: 15px;
+  color: var(--font-dark);
+  font-family: inherit;
+  outline: none;
   box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.PastOrders .filter-bar input[type="text"]:focus {
+  border-color: var(--brand-green);
+  box-shadow: 0 0 0 3px var(--accent-green-light);
+}
+
+.PastOrders .filter-bar input::placeholder {
+  color: var(--muted);
 }
 
 .PastOrders .filter-bar .clear-input {
   position: absolute;
-  right: 0.5rem;
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: none;
-  background: #d1d5db;
-  color: #1f2937;
+  background: var(--muted);
+  color: var(--pure-white);
   border-radius: 50%;
-  font-size: 1rem;
+  font-size: 14px;
   line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: inherit;
+  transition: background 0.15s ease;
 }
 
 .PastOrders .filter-bar .clear-input:hover {
-  background: #9ca3af;
-  color: white;
+  background: var(--brand-green);
 }
 
-.PastOrders .filter-bar button {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  background: #1d4ed8;
-  color: white;
+.PastOrders .filter-bar button[type="submit"],
+.PastOrders .filter-bar button[type="button"] {
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 1rem;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.PastOrders .filter-bar button[type="submit"] {
+  background: var(--brand-green);
+  border: 1.5px solid var(--brand-green);
+  color: var(--pure-white);
+}
+
+.PastOrders .filter-bar button[type="submit"]:hover:not(:disabled) {
+  background: var(--brand-green-hover);
+  border-color: var(--brand-green-hover);
+}
+
+.PastOrders .filter-bar button[type="button"] {
+  background: var(--pure-white);
+  border: 1.5px solid var(--brand-green);
+  color: var(--brand-green);
+}
+
+.PastOrders .filter-bar button[type="button"]:hover:not(:disabled) {
+  background: var(--brand-green);
+  color: var(--pure-white);
 }
 
 .PastOrders .filter-bar button:disabled {
@@ -70,54 +117,289 @@
   cursor: not-allowed;
 }
 
-.PastOrders .filter-bar button[type="button"] {
-  background: #6b7280;
-}
-
+/* Filter status indicator */
 .PastOrders .filter-status {
-  margin-bottom: 1rem;
-  color: #444;
+  display: inline-block;
+  background: var(--brand-cream);
+  color: var(--brand-green);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 999px;
+  margin-bottom: 16px;
 }
 
+.PastOrders .filter-status strong {
+  color: var(--brand-green);
+  font-weight: 700;
+}
+
+/* States */
 .PastOrders .error {
   color: #b91c1c;
-  margin: 1rem 0;
+  background: #fee2e2;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+  font-size: 14px;
 }
 
-.PastOrders .empty {
-  margin: 2rem 0;
-  color: #666;
-  text-align: center;
+.PastOrders .empty,
+.PastOrders > p {
+  color: var(--muted);
   font-style: italic;
+  text-align: center;
+  padding: 60px 0;
+  margin: 0;
 }
 
+/* Orders table */
 .PastOrders .orders-table {
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--pure-white);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-top: 12px;
+  box-shadow: 0 1px 2px rgba(15, 61, 46, 0.04);
 }
 
 .PastOrders .orders-table th,
 .PastOrders .orders-table td {
   text-align: left;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.PastOrders .orders-table th {
-  background: #f9fafb;
+.PastOrders .orders-table thead th {
+  background: var(--soft-grey);
+  font-size: 12px;
   font-weight: 600;
+  color: var(--font-light);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.PastOrders .orders-table tr:hover {
-  background: #f3f4f6;
+.PastOrders .orders-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.PastOrders .orders-table tbody tr {
+  transition: background 0.12s ease;
+}
+
+.PastOrders .orders-table tbody tr:hover {
+  background: var(--brand-cream);
+}
+
+.PastOrders .orders-table td {
+  font-size: 14px;
+  color: var(--font-dark);
 }
 
 .PastOrders .orders-table a {
-  color: #1d4ed8;
+  color: var(--brand-green);
+  font-weight: 600;
   text-decoration: none;
 }
 
 .PastOrders .orders-table a:hover {
   text-decoration: underline;
+}
+
+/* Status pills */
+.PastOrders .status-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+}
+
+.PastOrders .status-pending {
+  background: var(--status-pending-bg);
+  color: var(--status-pending-fg);
+}
+
+.PastOrders .status-completed {
+  background: var(--status-completed-bg);
+  color: var(--status-completed-fg);
+}
+
+.PastOrders .status-cancelled {
+  background: var(--status-cancelled-bg);
+  color: var(--status-cancelled-fg);
+}
+
+/* Tablet */
+@media screen and (max-width: 960px) {
+  .PastOrders {
+    padding: 24px 16px 50px;
+  }
+
+  .PastOrders h1 {
+    font-size: 28px;
+    margin-bottom: 18px;
+  }
+
+  .PastOrders .orders-table th,
+  .PastOrders .orders-table td {
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+}
+
+/* Mobile — switch table to stacked cards */
+@media screen and (max-width: 640px) {
+  .PastOrders {
+    padding: 20px 16px 40px;
+  }
+
+  .PastOrders h1 {
+    font-size: 22px;
+    margin-bottom: 16px;
+  }
+
+  .PastOrders .filter-bar {
+    gap: 8px;
+  }
+
+  .PastOrders .filter-bar .input-wrap {
+    min-width: 100%;
+  }
+
+  .PastOrders .filter-bar input[type="text"] {
+    height: 42px;
+    font-size: 14px;
+  }
+
+  .PastOrders .filter-bar button[type="submit"],
+  .PastOrders .filter-bar button[type="button"] {
+    flex: 1;
+    height: 42px;
+    padding: 0 16px;
+    font-size: 13px;
+  }
+
+  .PastOrders .filter-status {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+
+  /* Table → cards: rebuild the table layout as block-level rows */
+  .PastOrders .orders-table {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .PastOrders .orders-table thead {
+    display: none;
+  }
+
+  .PastOrders .orders-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .PastOrders .orders-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+    background: var(--pure-white);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 2px rgba(15, 61, 46, 0.04);
+  }
+
+  .PastOrders .orders-table tr:hover {
+    background: var(--pure-white);
+  }
+
+  .PastOrders .orders-table td {
+    border-bottom: none;
+    padding: 0;
+    font-size: 14px;
+  }
+
+  /* Order # — bold, top-left */
+  .PastOrders .orders-table td:nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--font-dark);
+  }
+
+  /* Status pill — top-right */
+  .PastOrders .orders-table td:nth-child(4) {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  /* Date — under order number, muted */
+  .PastOrders .orders-table td:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    color: var(--font-light);
+    font-size: 13px;
+  }
+
+  /* Customer — under date, muted, with label */
+  .PastOrders .orders-table td:nth-child(3) {
+    display: block;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    color: var(--font-light);
+    font-size: 13px;
+  }
+
+  .PastOrders .orders-table td:nth-child(3)::before {
+    content: "Customer: ";
+    font-weight: 500;
+  }
+
+  /* Total — bottom-left, prominent */
+  .PastOrders .orders-table td:nth-child(5) {
+    grid-column: 1;
+    grid-row: 4;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--brand-green);
+    margin-top: 4px;
+  }
+
+  /* View link — bottom-right */
+  .PastOrders .orders-table td:nth-child(6) {
+    grid-column: 2;
+    grid-row: 4;
+    justify-self: end;
+    margin-top: 4px;
+  }
+
+  .PastOrders .status-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+  }
+}
+
+/* Very narrow */
+@media screen and (max-width: 380px) {
+  .PastOrders .filter-bar .input-wrap {
+    min-width: 100%;
+  }
+
+  .PastOrders .filter-bar button[type="submit"],
+  .PastOrders .filter-bar button[type="button"] {
+    flex: 1 1 calc(50% - 4px);
+  }
 }

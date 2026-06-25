@@ -74,17 +74,24 @@ const CartTable = ({ products, cart }) => {
   );
 };
 
-const CartItems = ({ products, cart }) => {
+const CartItems = ({ products, cart, clearCart }) => {
   const hasItems = Object.keys(cart).length;
 
   return (
     <>
-      <h3 className="">
-        Shopping Cart{" "}
-        <span className="button">
-          <i className="material-icons md-48">add_shopping_cart</i>
-        </span>
-      </h3>
+      <div className="cart-header">
+        <h3 className="">
+          Shopping Cart{" "}
+          <span className="button">
+            <i className="material-icons md-48">add_shopping_cart</i>
+          </span>
+        </h3>
+        {hasItems > 0 && clearCart && (
+          <button type="button" className="clear-cart" onClick={clearCart}>
+            Clear Cart
+          </button>
+        )}
+      </div>
       {hasItems ? (
         <>
           <CartTable products={products} cart={cart} />
@@ -110,20 +117,24 @@ export default function ShoppingCart({
   order,
   setOrder,
   error,
+  clearCart,
 }) {
   return (
     <div className="ShoppingCart">
       {isOpen ? (
         <div className="open">
-          <CartItems products={products} cart={cart} />
-          <PaymentInfo
-            userInfo={userInfo}
-            setUserInfo={setUserInfo}
-            handleOnCheckout={handleOnCheckout}
-            isCheckingOut={isCheckingOut}
-            error={error}
-          />
-          <CheckoutSuccess userInfo={userInfo} order={order} setOrder={setOrder} products={products} />
+          <CartItems products={products} cart={cart} clearCart={clearCart} />
+
+          <div className="cart-footer">
+            <PaymentInfo
+              userInfo={userInfo}
+              setUserInfo={setUserInfo}
+              handleOnCheckout={handleOnCheckout}
+              isCheckingOut={isCheckingOut}
+              error={error}
+            />
+            <CheckoutSuccess userInfo={userInfo} order={order} setOrder={setOrder} products={products} />
+          </div>
         </div>
       ) : (
         null

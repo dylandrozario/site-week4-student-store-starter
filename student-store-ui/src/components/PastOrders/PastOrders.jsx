@@ -110,7 +110,11 @@ function PastOrders() {
                 <td>#{order.order_id}</td>
                 <td>{new Date(order.created_at).toLocaleDateString()}</td>
                 <td>{order.customer_id}</td>
-                <td>{order.status}</td>
+                <td>
+                  <span className={`status-pill status-${order.status}`}>
+                    {order.status}
+                  </span>
+                </td>
                 <td>{formatPrice(order.total_price)}</td>
                 <td>
                   <Link to={`/orders/${order.order_id}`}>View →</Link>

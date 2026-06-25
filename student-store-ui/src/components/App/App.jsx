@@ -53,6 +53,12 @@ function App() {
   const handleOnAddToCart = (item) => setCart(addToCart(cart, item));
   const handleGetItemQuantity = (item) => getQuantityOfItemInCart(cart, item);
   const handleGetTotalCartItems = () => getTotalItemsInCart(cart);
+  const handleClearCart = () => setCart({});
+
+  const handleClearFilters = () => {
+    setActiveCategory("All Categories");
+    setSearchInputValue("");
+  };
 
   const handleOnSearchInputChange = (event) => {
     setSearchInputValue(event.target.value);
@@ -93,6 +99,8 @@ function App() {
   };
 
 
+  const totalCartItems = handleGetTotalCartItems();
+
   return (
     <div className="App">
       <BrowserRouter>
@@ -110,6 +118,7 @@ function App() {
           getQuantityOfItemInCart={handleGetItemQuantity}
           getTotalItemsInCart={handleGetTotalCartItems}
           handleOnCheckout={handleOnCheckout}
+          clearCart={handleClearCart}
           order={order}
           setOrder={setOrder}
         />
@@ -119,6 +128,8 @@ function App() {
             setActiveCategory={setActiveCategory}
             searchInputValue={searchInputValue}
             handleOnSearchInputChange={handleOnSearchInputChange}
+            totalCartItems={totalCartItems}
+            toggleSidebar={toggleSidebar}
           />
           <Routes>
             <Route
@@ -134,6 +145,7 @@ function App() {
                   searchInputValue={searchInputValue}
                   removeFromCart={handleOnRemoveFromCart}
                   getQuantityOfItemInCart={handleGetItemQuantity}
+                  clearFilters={handleClearFilters}
                 />
               }
             />
@@ -155,6 +167,9 @@ function App() {
                   addToCart={handleOnAddToCart}
                   removeFromCart={handleOnRemoveFromCart}
                   getQuantityOfItemInCart={handleGetItemQuantity}
+                  setActiveCategory={setActiveCategory}
+                  toggleSidebar={toggleSidebar}
+                  clearCart={handleClearCart}
                 />
               }
             />

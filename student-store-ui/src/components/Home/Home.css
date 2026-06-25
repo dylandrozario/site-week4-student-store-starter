@@ -1,8 +1,158 @@
 .Home {
   width: 100%;
-  max-width: 100vw;
-  height: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  padding: 0 var(--side-padding);
+}
+
+.Home .hero {
+  max-width: var(--content-width);
+  width: 100%;
+  margin: 28px auto 0;
+  background: var(--brand-cream);
+  border-radius: 14px;
+  padding: 48px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  align-items: center;
+  gap: 32px;
+  overflow: hidden;
+  min-height: 340px;
+}
+
+.Home .hero-content h1 {
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--brand-green);
+  line-height: 1.15;
+  margin-bottom: 16px;
+}
+
+.Home .hero-content .hero-sub {
+  font-size: 16px;
+  color: var(--font-light);
+  margin-bottom: 0;
+  max-width: 420px;
+}
+
+.Home .hero-image {
+  height: 100%;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.Home .hero-image-inner {
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  max-height: 360px;
+  object-fit: contain;
+}
+
+.Home .catalog {
+  max-width: var(--content-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 0 60px;
+}
+
+.Home .catalog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.Home .catalog-heading {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--font-dark);
+}
+
+.Home .clear-filters {
+  background: transparent;
+  color: var(--brand-green);
+  border: 1.5px solid var(--brand-green);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.Home .clear-filters:hover {
+  background: var(--brand-green);
+  color: var(--pure-white);
+}
+
+.Home .catalog-state {
+  color: var(--muted);
+  font-style: italic;
+  padding: 40px 0;
+  text-align: center;
+}
+
+@media screen and (max-width: 960px) {
+  .Home .hero {
+    padding: 36px;
+    min-height: 280px;
+  }
+
+  .Home .hero-content h1 {
+    font-size: 34px;
+  }
+
+  .Home .catalog-heading {
+    font-size: 22px;
+  }
+}
+
+@media screen and (max-width: 720px) {
+  .Home {
+    padding: 0 16px;
+  }
+
+  .Home .hero {
+    grid-template-columns: 1fr;
+    padding: 28px 24px;
+    min-height: 0;
+    margin-top: 20px;
+  }
+
+  .Home .hero-content h1 {
+    font-size: 26px;
+  }
+
+  .Home .hero-content .hero-sub {
+    font-size: 14px;
+  }
+
+  .Home .hero-image {
+    display: none;
+  }
+
+  .Home .catalog {
+    padding: 24px 0 40px;
+  }
+
+  .Home .catalog-header {
+    margin-bottom: 16px;
+  }
+
+  .Home .catalog-heading {
+    font-size: 20px;
+  }
+
+  .Home .clear-filters {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
 }

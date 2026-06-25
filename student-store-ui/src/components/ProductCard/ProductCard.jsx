@@ -6,35 +6,35 @@ import "./ProductCard.css"
 function ProductCard({ product, quantity, addToCart, removeFromCart }) {
   return (
     <div className="ProductCard">
-      <div className="media">
-        <Link to={`/${product.id}`}>
-          {product.image_url ? <img src={product.image_url} alt="product cover" /> : <img src={codepath} alt="product cover" />}
-        </Link>
-      </div>
+      <Link to={`/${product.id}`} className="media">
+        <img
+          src={product.image_url || codepath}
+          alt={product.name}
+          onError={(e) => {
+            if (e.target.src !== codepath) e.target.src = codepath;
+          }}
+        />
+      </Link>
+
       <div className="product-info">
-        <div className="info">
+        <div className="info-row">
           <p className="product-name">{product.name}</p>
           <p className="product-price">{formatPrice(product.price)}</p>
         </div>
-        <div className="actions">
-          <div className="buttons">
-            <i className="material-icons" onClick={addToCart}>
-              add
-            </i>
-            <i className="material-icons" onClick={removeFromCart}>
-              remove
-            </i>
-          </div>
+        {product.category && <p className="product-category">{product.category}</p>}
 
-          {quantity ? (
-            <span className="quantity">
-              <span className="amt">{quantity}</span>
-            </span>
-          ) : null}
-        </div>
+        {quantity > 0 ? (
+          <div className="quantity-controls">
+            <button className="qty-btn" onClick={removeFromCart} aria-label="Remove one">−</button>
+            <span className="qty-count">{quantity}</span>
+            <button className="qty-btn" onClick={addToCart} aria-label="Add one">+</button>
+          </div>
+        ) : (
+          <button className="add-to-cart" onClick={addToCart}>Add to Cart</button>
+        )}
       </div>
     </div>
   )
 }
 
-export default  ProductCard;
+export default ProductCard;

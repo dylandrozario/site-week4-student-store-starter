@@ -1,41 +1,38 @@
-import { Link } from "react-router-dom"
 import ShoppingCart from "../ShoppingCart/ShoppingCart"
-import logo from "../../assets/codepath.svg"
 import "./Sidebar.css"
 
-
-function Sidebar({ cart, isOpen, products, userInfo, setUserInfo, toggleSidebar, handleOnCheckout,isCheckingOut, order, setOrder,error,}) {
+function Sidebar({ cart, isOpen, products, userInfo, setUserInfo, toggleSidebar, handleOnCheckout, isCheckingOut, order, setOrder, error, clearCart }) {
   return (
-    <section className={`Sidebar ${isOpen ? "open" : "closed"}`}>
+    <>
+      <div className={`sidebar-backdrop ${isOpen ? "visible" : ""}`} onClick={toggleSidebar} />
+      <aside className={`Sidebar ${isOpen ? "open" : "closed"}`}>
+        <div className="wrapper">
+          <button
+            type="button"
+            className="toggle-button"
+            onClick={toggleSidebar}
+            aria-label="Close cart"
+          >
+            <i className="material-icons">close</i>
+          </button>
 
-      <div className="wrapper">
-
-        <div className="logo">
-            <Link to="/">
-              <img src={logo} alt="codepath logo" />
-            </Link>
+          <ShoppingCart
+            isOpen={isOpen}
+            cart={cart}
+            products={products}
+            toggleSidebar={toggleSidebar}
+            userInfo={userInfo}
+            setUserInfo={setUserInfo}
+            handleOnCheckout={handleOnCheckout}
+            isCheckingOut={isCheckingOut}
+            error={error}
+            order={order}
+            setOrder={setOrder}
+            clearCart={clearCart}
+          />
         </div>
-
-        <span className={`toggle-button button ${isOpen ? "open" : "closed"}`} onClick={toggleSidebar}>
-          <i className="material-icons md-48">arrow_forward</i>
-        </span>
-
-        <ShoppingCart
-          isOpen={isOpen}
-          cart={cart}
-          products={products}
-          toggleSidebar={toggleSidebar}
-          userInfo={userInfo}
-          setUserInfo={setUserInfo}
-          handleOnCheckout={handleOnCheckout}
-          isCheckingOut={isCheckingOut}
-          error={error}
-          order={order}
-          setOrder={setOrder}
-        />
-        
-      </div>
-    </section>
+      </aside>
+    </>
   )
 }
 

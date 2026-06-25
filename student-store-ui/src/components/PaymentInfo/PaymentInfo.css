@@ -1,47 +1,86 @@
 .PaymentInfo {
-  padding: 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-.PaymentInfo > h3 {
-  color: white;
+
+.PaymentInfo h3 {
+  font-size: 18px;
+  font-weight: 700;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  color: var(--font-dark);
+  margin-bottom: 4px;
 }
-.PaymentInfo > h3 > span {
-  margin-left: 10px;
+
+.PaymentInfo h3 .button .material-icons {
+  color: var(--brand-green);
+  font-size: 20px;
 }
+
 .PaymentInfo .label {
-  color: white;
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--font-light);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
 }
-.PaymentInfo .is-danger {
-  color: var(--bright-red);
-}
+
 .PaymentInfo .input-field {
   width: 100%;
-  margin: 5px 0;
 }
-.PaymentInfo .input-field .label {
-  color: white;
-}
+
 .PaymentInfo .input-field .control {
   width: 100%;
-  margin: 5px 0;
 }
+
 .PaymentInfo .input-field .control input {
   width: 100%;
-  height: 36px;
-  padding: 0 15px;
+  height: 42px;
+  padding: 0 14px;
   border-radius: 8px;
-  border: solid 1px #e4e4e4;
-  flex: 1;
-  font-size: 16px;
+  border: 1px solid var(--border-color);
+  background: var(--pure-white);
+  font-size: 15px;
+  color: var(--font-dark);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+
+.PaymentInfo .input-field .control input:focus {
+  border-color: var(--brand-green);
+  box-shadow: 0 0 0 3px var(--accent-green-light);
+}
+
+.PaymentInfo .is-danger {
+  color: #b91c1c;
+  font-size: 14px;
+  margin: 0;
+}
+
 .PaymentInfo button {
-  margin-top: 10px;
-  padding: 12px 18px;
-  font-size: 18px;
+  margin-top: 8px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
-  background: transparent;
-  border: solid 1px white;
-  color: white;
+  background: var(--brand-green);
+  border: 1.5px solid var(--brand-green);
+  color: var(--pure-white);
+  border-radius: 999px;
+  transition: background 0.15s ease;
+}
+
+.PaymentInfo button:hover:not(:disabled) {
+  background: var(--brand-green-hover);
+  border-color: var(--brand-green-hover);
+}
+
+.PaymentInfo button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
