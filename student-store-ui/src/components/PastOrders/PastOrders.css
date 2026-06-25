@@ -1,0 +1,123 @@
+.PastOrders {
+  padding: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.PastOrders h1 {
+  margin-bottom: 1.5rem;
+}
+
+.PastOrders .filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.PastOrders .filter-bar .input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+
+.PastOrders .filter-bar input[type="text"] {
+  width: 100%;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.PastOrders .filter-bar .clear-input {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  background: #d1d5db;
+  color: #1f2937;
+  border-radius: 50%;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.PastOrders .filter-bar .clear-input:hover {
+  background: #9ca3af;
+  color: white;
+}
+
+.PastOrders .filter-bar button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  background: #1d4ed8;
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.PastOrders .filter-bar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.PastOrders .filter-bar button[type="button"] {
+  background: #6b7280;
+}
+
+.PastOrders .filter-status {
+  margin-bottom: 1rem;
+  color: #444;
+}
+
+.PastOrders .error {
+  color: #b91c1c;
+  margin: 1rem 0;
+}
+
+.PastOrders .empty {
+  margin: 2rem 0;
+  color: #666;
+  text-align: center;
+  font-style: italic;
+}
+
+.PastOrders .orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.PastOrders .orders-table th,
+.PastOrders .orders-table td {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.PastOrders .orders-table th {
+  background: #f9fafb;
+  font-weight: 600;
+}
+
+.PastOrders .orders-table tr:hover {
+  background: #f3f4f6;
+}
+
+.PastOrders .orders-table a {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.PastOrders .orders-table a:hover {
+  text-decoration: underline;
+}

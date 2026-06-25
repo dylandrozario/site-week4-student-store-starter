@@ -261,10 +261,29 @@ Delete a product. Cascade-deletes its OrderItems (per the schema rule).
 
 ### `GET /orders`
 
-Fetch every order. Each order includes its line items.
+Fetch every order. Each order includes its line items. This endpoint powers two UI features: the **Past Orders page** (lists every order the user has placed) and the **email filter** (narrows the list to a single customer's orders).
 
-- **Default sort:** `ORDER BY created_at DESC` — newest first, so the customer sees their most recent order at the top.
-- **Query params (optional):** `?customer_id=<email>` to support the stretch "filter by email" feature.
+#### Query Parameters
+
+All parameters are optional and can be combined (e.g., `?customer_id=ada@codepath.org&sort=total_price&order=desc`).
+
+| Param | Values | Default | Behavior |
+| --- | --- | --- | --- |
+| `customer_id` | any non-empty string (the frontend treats it as email) | none | Filters to orders whose `customer_id` exactly matches the value. Unknown values return `[]` (200, not 404). Case-sensitive. This is the "filter by email" stretch feature. |
+| `sort` | `order_id` / `customer_id` / `total_price` / `created_at` | `created_at` | Column to order results by. Values outside the allow-list silently fall back to the default (no 400). |
+| `order` | `asc` / `desc` | `desc` | Sort direction. Anything else falls back to `desc`. |
+
+**Default behavior (no params):** return all orders, sorted by `created_at DESC` — newest first, so the customer sees their most recent order at the top. Matches the stretch "Past Orders page" UX expectation.
+
+**Example requests:**
+
+- `GET /orders` → every order, newest first.
+- `GET /orders?customer_id=ada@codepath.org` → only Ada's orders, newest first.
+- `GET /orders?sort=total_price&order=desc` → all orders, biggest spenders first.
+- `GET /orders?customer_id=ada@codepath.org&sort=total_price&order=desc` → Ada's orders, most expensive first.
+
+**Why allow-list `sort` instead of passing it through to Prisma:** same reason as `GET /products` — defends against ORM injection and surfaces the queryable fields as part of the API contract.
+
 - **Success — `200 OK`:**
   ```json
   [
@@ -289,13 +308,17 @@ Fetch every order. Each order includes its line items.
 
 ### `GET /orders/:order_id`
 
-Fetch one order with its line items.
+Fetch one order with its line items. This is the endpoint behind the **individual order detail page** — the page a user reaches by clicking a row on the Past Orders page.
 
-- **Route param:** `order_id`.
-- **Success — `200 OK`:** single order object with embedded `orderItems` (same shape as above).
+- **Route param:** `order_id` (integer).
+- **Success — `200 OK`:** single order object with embedded `orderItems` (same shape as `GET /orders`'s array elements).
 - **Error — `404`:** order doesn't exist.
   ```json
   { "error": "Order not found" }
+  ```
+- **Error — `400`:** `order_id` is not a valid integer (e.g., `/orders/abc`).
+  ```json
+  { "error": "order_id must be an integer" }
   ```
 
 ### `POST /orders` ⭐ — the transactional endpoint
@@ -809,3 +832,29 @@ After a `201` response from `POST /orders`, `App.jsx` calls `setCart({})`. The s
 - Keeping names out of `OrderItem` means the API response stays a clean record of *what was bought* (by ID + price), and the frontend handles the cosmetic concern of *what to call it*.
 
 If the cached `products` array doesn't contain the referenced ID (e.g., the product was deleted after the order was placed), the receipt falls back to rendering `"Product #${item.product_id}"`. This is defensive code; in normal usage it never fires because the products fetch completes long before any order is placed in the same session.
+
+## Frontend Routes
+
+The frontend (React + React Router) exposes the following client-side routes. Each maps to one or more API endpoints. The API itself doesn't care which routes exist on the frontend, but recording them here makes the spec a complete map of both sides.
+
+| Route | Purpose | API endpoints used |
+| --- | --- | --- |
+| `/` | Home — product grid with category sidebar and search | `GET /products` |
+| `/:productId` | Product detail page | Reuses the cached `products` array from `/` — no per-product fetch needed |
+| `/orders` | Past Orders page — list of every order placed, with an email filter input | `GET /orders` (optionally with `?customer_id=<email>` query param when the email filter is active) |
+| `/orders/:order_id` | Individual order detail — full line-item breakdown | `GET /orders/:order_id` |
+
+**Past Orders page behavior:**
+
+- Renders one row per order showing `order_id`, `created_at`, `status`, and `total_price`.
+- Has an email input + "Filter" button. Submitting the form re-fetches `GET /orders?customer_id=<email>` and replaces the list.
+- A "Clear filter" button re-fetches `GET /orders` with no query params.
+- Each row links to `/orders/:order_id` for the detail view.
+- "No orders found" UI when the response is `[]` (which can happen either when the database is empty or when an email filter matches nothing — both render the same way since the API treats unknown customer_ids as a valid 200 with `[]`).
+
+**Individual order detail page behavior:**
+
+- Renders `order_id`, `customer_id`, `status`, `created_at`, and `total_price` at the top.
+- Renders the `orderItems` array as a line-item table — each line shows quantity, product name (looked up against the cached `products` array, with the `"Product #${id}"` fallback per the receipt logic), unit price, and line total.
+- "Back to Orders" link to `/orders`.
+- `404` from the API (invalid `order_id`, or one that's been deleted) renders the existing `NotFound` component, not a crash.
