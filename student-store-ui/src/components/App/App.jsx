@@ -13,6 +13,11 @@ import "./App.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
+// Diagnostic: log the API URL the frontend was built with
+console.log("[StudentStore] API_URL =", API_URL);
+console.log("[StudentStore] import.meta.env.MODE =", import.meta.env.MODE);
+console.log("[StudentStore] import.meta.env.VITE_API_URL =", import.meta.env.VITE_API_URL);
+
 function App() {
 
   // State variables
@@ -30,14 +35,28 @@ function App() {
   // Fetch products on mount
   useEffect(() => {
     const fetchProducts = async () => {
+      const url = `${API_URL}/products`;
+      console.log("[StudentStore] Fetching products from:", url);
       setIsFetching(true);
       setError(null);
       try {
-        const response = await axios.get(`${API_URL}/products`);
+        const response = await axios.get(url);
+        console.log("[StudentStore] Products response status:", response.status);
+        console.log("[StudentStore] Products response data:", response.data);
+        console.log("[StudentStore] Products count:", Array.isArray(response.data) ? response.data.length : "(not an array)");
         setProducts(response.data);
       } catch (err) {
-        console.error(err);
-        setError("Failed to load products. Is the API running?");
+        console.error("[StudentStore] Failed to fetch products");
+        console.error("[StudentStore] Error message:", err.message);
+        console.error("[StudentStore] Error code:", err.code);
+        if (err.response) {
+          console.error("[StudentStore] Response status:", err.response.status);
+          console.error("[StudentStore] Response body:", err.response.data);
+        } else if (err.request) {
+          console.error("[StudentStore] No response received — likely CORS, network failure, or backend asleep/down");
+        }
+        console.error("[StudentStore] Full error:", err);
+        setError(`Failed to load products: ${err.message}`);
       } finally {
         setIsFetching(false);
       }
