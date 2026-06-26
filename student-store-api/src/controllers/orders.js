@@ -79,6 +79,35 @@ async function update(req, res) {
   }
 }
 
+async function addItem(req, res) {
+  const order_id = Number(req.params.order_id);
+  if (!Number.isInteger(order_id)) {
+    return res.status(400).json({ error: "order_id must be an integer" });
+  }
+
+  const { product_id, quantity } = req.body ?? {};
+  if (!Number.isInteger(product_id)) {
+    return res.status(400).json({ error: "product_id must be an integer" });
+  }
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return res.status(400).json({ error: "quantity must be an integer ≥ 1" });
+  }
+
+  try {
+    const order = await Order.addItem(order_id, { product_id, quantity });
+    res.status(201).json(order);
+  } catch (err) {
+    if (err instanceof Order.OrderNotFoundError) {
+      return res.status(404).json({ error: err.message });
+    }
+    if (err instanceof Order.MissingProductError) {
+      return res.status(409).json({ error: err.message });
+    }
+    console.error(err);
+    res.status(500).json({ error: "Failed to add item to order" });
+  }
+}
+
 async function remove(req, res) {
   const order_id = Number(req.params.order_id);
   if (!Number.isInteger(order_id)) {
@@ -96,4 +125,4 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { list, get, create, update, remove };
+module.exports = { list, get, create, update, remove, addItem };

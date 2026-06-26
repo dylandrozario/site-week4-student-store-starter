@@ -13,6 +13,14 @@ class MissingProductError extends Error {
   }
 }
 
+class OrderNotFoundError extends Error {
+  constructor(orderId) {
+    super(`Order not found: id ${orderId}`);
+    this.name = "OrderNotFoundError";
+    this.orderId = orderId;
+  }
+}
+
 class Order {
   static VALID_STATUSES = VALID_STATUSES;
 
@@ -82,6 +90,54 @@ class Order {
     });
   }
 
+  static async addItem(order_id, { product_id, quantity }) {
+    return prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { order_id } });
+      if (!order) throw new OrderNotFoundError(order_id);
+
+      const product = await tx.product.findUnique({ where: { id: product_id } });
+      if (!product) throw new MissingProductError(product_id);
+
+      // If this product already has a line on the order, increment its quantity
+      // instead of creating a second row (mirrors the merge rule from POST /orders).
+      const existing = await tx.orderItem.findFirst({
+        where: { order_id, product_id },
+      });
+
+      const lineItem = existing
+        ? await tx.orderItem.update({
+            where: { order_item_id: existing.order_item_id },
+            data: { quantity: existing.quantity + quantity },
+          })
+        : await tx.orderItem.create({
+            data: {
+              order_id,
+              product_id,
+              quantity,
+              price: product.price,
+            },
+          });
+
+      // Recompute total_price from scratch over the order's current items.
+      // This keeps total_price honest after every item add.
+      const items = await tx.orderItem.findMany({ where: { order_id } });
+      const total_price = items.reduce(
+        (sum, item) => sum.add(item.price.mul(item.quantity)),
+        new Prisma.Decimal(0),
+      );
+
+      await tx.order.update({
+        where: { order_id },
+        data: { total_price },
+      });
+
+      return tx.order.findUnique({
+        where: { order_id },
+        include: { orderItems: true },
+      });
+    });
+  }
+
   static async update(order_id, { customer_id, status }) {
     return prisma.order.update({
       where: { order_id },
@@ -98,3 +154,4 @@ class Order {
 
 module.exports = Order;
 module.exports.MissingProductError = MissingProductError;
+module.exports.OrderNotFoundError = OrderNotFoundError;

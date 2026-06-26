@@ -398,7 +398,13 @@ Delete an order. Cascade-deletes its OrderItems.
 
 List every line item across the database. Useful for admin views.
 
+- **Query params (optional):**
+  - `?order_id=<int>` → filter to line items belonging to one order
+  - `?product_id=<int>` → filter to line items referencing one product
+  - Both can combine.
 - **Success — `200 OK`:** array of OrderItem objects.
+- **Error — `400`:** `order_id` or `product_id` query param present but not an integer.
+- **Error — `500`:** database failure.
 
 ### `POST /orders/:order_id/items`
 
@@ -407,8 +413,10 @@ Add a new line item to an existing order.
 - **Route param:** `order_id`.
 - **Request body:** `{ "product_id": 7, "quantity": 2 }`.
 - **Server snapshots `Product.price` into the new line item, the same way `POST /orders` does.**
-- **Open question (deferred):** does adding an item also update the parent order's `total_price`? Section 1 deliberately treats `total_price` as a snapshot, so adding items here would either (a) leave `total_price` stale or (b) require a recompute. Decide when implementing — flagging it now so the decision is conscious.
-- **Success — `201 Created`:** the new line item.
+- **Decided:** the endpoint **recomputes `total_price` after the insert** so the order's stored total stays consistent with the sum of its items. Wrapped in a `$transaction` along with the insert (and any quantity-merge on an existing line) so both writes commit together. The price snapshot rule from Section 1 still holds — each `OrderItem.price` is frozen at insert time; only `total_price` re-derives.
+- **Duplicate `product_id` behavior:** if the order already has a line item for this product, the quantity is added to the existing row rather than creating a second one (matches the merge rule from `POST /orders`).
+- **Success — `201 Created`:** the full updated order, with the new/updated `orderItems` and the recomputed `total_price`.
+- **Error — `400`:** missing or invalid `product_id` / `quantity`, or non-integer `order_id` in the URL.
 - **Error — `404`:** parent order doesn't exist.
 - **Error — `409`:** referenced product doesn't exist.
 
@@ -428,8 +436,8 @@ Add a new line item to an existing order.
 | POST   | `/orders`                     | **Transactional create**             | 201     | 400, 409      |
 | PUT    | `/orders/:order_id`           | Update order (status, customer)      | 200     | 404           |
 | DELETE | `/orders/:order_id`           | Delete order (cascade)               | 204     | 404           |
-| GET    | `/order-items` *(stretch)*    | All line items                       | 200     | 500           |
-| POST   | `/orders/:order_id/items` *(stretch)* | Add item to order            | 201     | 404, 409      |
+| GET    | `/order-items`                | All line items (optional `?order_id` / `?product_id`) | 200 | 400, 500 |
+| POST   | `/orders/:order_id/items`     | Add item to existing order (recomputes total_price) | 201 | 400, 404, 409 |
 
 ---
 
