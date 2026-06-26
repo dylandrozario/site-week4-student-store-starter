@@ -10,7 +10,7 @@ Deployed Application (optional): [Student Store Deployed Site](https://site-week
 
 - [X] **Database Creation**: Set up a Postgres database to store information about products and orders.
   - [X]  Use Prisma to define models for `products`, `orders`, and `order_items`.
-  - [ ]  **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: Use Prisma Studio to demonstrate the creation of your `products`, `orders`, and `order_items` tables. 
+  - [X]  **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: Use Prisma Studio to demonstrate the creation of your `products`, `orders`, and `order_items` tables. 
 - [X] **Products Model**
   - [X] Develop a products model to represent individual items available in the store. 
   - [X] This model should at minimum include the attributes:
@@ -22,7 +22,7 @@ Deployed Application (optional): [Student Store Deployed Site](https://site-week
     - [X] `category`
   - [X] Implement methods for CRUD operations on products.
   - [X] Ensure transaction handling such that when an product is deleted, any `order_items` that reference that product are also deleted. 
-  - [ ] **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: Use Prisma Studio to demonstrate the creation of all attributes (table columns) in your Products Model.
+  - [X] **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: Use Prisma Studio to demonstrate the creation of all attributes (table columns) in your Products Model.
 - [X] **Orders Model**
   - [X] Develop a model to manage orders. 
   - [X] This model should at minimum include the attributes:
@@ -33,7 +33,7 @@ Deployed Application (optional): [Student Store Deployed Site](https://site-week
     - [X] `created_at`
   - [X] Implement methods for CRUD operations on orders.
   - [X] Ensure transaction handling such that when an order is deleted, any `order_items` that reference that order are also deleted. 
-  - [ ] **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: Use Prisma Studio to demonstrate the creation of all attributes (table columns) in your Order Model.
+  - [X] **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: Use Prisma Studio to demonstrate the creation of all attributes (table columns) in your Order Model.
 
 - [X] **Order Items Model**
   - [X] Develop a model to represent the items within an order. 
@@ -44,7 +44,7 @@ Deployed Application (optional): [Student Store Deployed Site](https://site-week
     - [X] `quantity`
     - [X] `price`
   - [X] Implement methods for fetching and creating order items.  
-  - [ ] **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: Use Prisma Studio to demonstrate the creation of all attributes (table columns) in your Order Items Model.
+  - [X] **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: Use Prisma Studio to demonstrate the creation of all attributes (table columns) in your Order Items Model.
 - [X] **API Endpoints**
   - [X] Application supports the following **Product Endpoints**:
     - [X] `GET /products`: Fetch a list of all products.
@@ -58,13 +58,13 @@ Deployed Application (optional): [Student Store Deployed Site](https://site-week
     - [X] `POST /orders`: Create a new order with specified order items.
     - [X] `PUT /orders/:order_id`: Update the details of an existing order (e.g., change status).
     - [X] `DELETE /orders/:order_id`: Remove an order from the database.
-    - [ ] **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: Use Postman or another API testing tool to demonstrate the successful implementation of each endpoint. For the `DELETE` endpoints, please use Prisma Studio to demonstrate that any relevant order items have been deleted. 
+    - [X] **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: Use Postman or another API testing tool to demonstrate the successful implementation of each endpoint. For the `DELETE` endpoints, please use Prisma Studio to demonstrate that any relevant order items have been deleted. 
 - [X] **Frontend Integration**
   - [X] Connect the backend API to the provided frontend interface, ensuring dynamic interaction for product browsing, cart management, and order placement. Adjust the frontend as necessary to work with your API.
   - [X] Ensure the home page displays products contained in the product table.
-  - [ ] **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: Use `npm start` to run your server and display your website in your browser. 
-    - [ ] Demonstrate that users can successfully add items to their shopping cart, delete items from their shopping cart, and place an order
-    - [ ] After placing an order use Postman or Prisma Studio demonstrate that a corresponding order has been created in your orders table.
+  - [X] **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: Use `npm start` to run your server and display your website in your browser. 
+    - [X] Demonstrate that users can successfully add items to their shopping cart, delete items from their shopping cart, and place an order
+    - [X] After placing an order use Postman or Prisma Studio demonstrate that a corresponding order has been created in your orders table.
 
 ### Stretch Features
 
@@ -92,15 +92,15 @@ Deployed Application (optional): [Student Store Deployed Site](https://site-week
     - [X] Proper error handling is implemented, such as displaying "no orders found" when an invalid email is provided.
 - [X] **Deployment**
   - [X] Website is deployed using [Render](https://courses.codepath.org/snippets/site/render_deployment_guide).
-  - [ ] **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: To ease the grading process, please use the deployed version of your website in your walkthrough with the URL visible. 
+  - [X] **VIDEO WALKTHROUGH SPECIAL INSTRUCTIONS**: To ease the grading process, please use the deployed version of your website in your walkthrough with the URL visible. 
 
 
 
 ### Walkthrough Video
 
-`TODO://` Add the embedded URL code to your animated app walkthrough below, `ADD_EMBEDDED_CODE_HERE`. Make sure the video or gif actually renders and animates when viewing this README. (🚫 Remove this paragraph after adding walkthrough video)
 
-`ADD_EMBEDDED_CODE_HERE`
+
+[Walkthrough](https://www.loom.com/share/4f61d7a6b85e40e9b0c841ec76daa858)
 
 ### Reflection
 
